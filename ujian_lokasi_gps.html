@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Uji Lokasi GPS</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, Segoe UI, sans-serif; background:#f3f6fa; color:#172033; }
+  main { max-width:760px; margin:36px auto; padding:20px; }
+  .panel { background:white; border:1px solid #e1e7ef; border-radius:18px; padding:24px; box-shadow:0 8px 28px rgba(18,35,60,.06); }
+  h1 { margin:0 0 8px; font-size:1.65rem; }
+  p { color:#5b667a; line-height:1.55; }
+  button { border:0; border-radius:12px; padding:13px 18px; background:#1463d5; color:white; font-size:1rem; font-weight:650; cursor:pointer; }
+  button:disabled { opacity:.55; cursor:wait; }
+  .status { padding:12px; background:#f2f6fc; border-radius:12px; margin:16px 0; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin:18px 0; }
+  .item { padding:15px; background:#f8fafc; border:1px solid #e5eaf2; border-radius:12px; }
+  .label { color:#68748a; font-size:.86rem; margin-bottom:6px; }
+  .value { font-size:1.08rem; font-weight:650; overflow-wrap:anywhere; }
+  iframe { width:100%; height:350px; border:0; border-radius:14px; margin-top:12px; }
+  a { display:inline-block; margin-top:12px; color:#1463d5; font-weight:600; }
+  .note { font-size:.85rem; margin-top:20px; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <section class="panel">
+    <h1>Uji Lokasi GPS</h1>
+    <p>Uji lokasi perangkat melalui fitur lokasi browser. Tekan tombol di bawah dan pilih <b>Izinkan</b> pada permintaan izin browser.</p>
+    <button id="locate">Ambil lokasi saya</button>
+    <div class="status" id="status" role="status">Belum mengambil lokasi.</div>
+    <div class="grid" id="results" hidden>
+      <div class="item"><div class="label">Latitude</div><div class="value" id="lat">—</div></div>
+      <div class="item"><div class="label">Longitude</div><div class="value" id="lon">—</div></div>
+      <div class="item"><div class="label">Perkiraan akurasi</div><div class="value" id="accuracy">—</div></div>
+      <div class="item"><div class="label">Waktu pengambilan</div><div class="value" id="time">—</div></div>
+    </div>
+    <div id="mapArea" hidden>
+      <iframe id="map" title="Peta lokasi yang terdeteksi" loading="lazy"></iframe>
+      <a id="mapsLink" target="_blank" rel="noopener noreferrer">Buka titik di Google Maps</a>
+    </div>
+    <p class="note">Privasi: halaman demo ini tidak mengirim atau menyimpan koordinat ke server. Data ditampilkan di browser Anda. Lokasi yang diperoleh bergantung pada perangkat, browser, dan kondisi sinyal.</p>
+  </section>
+</main>
+<script>
+const button = document.getElementById('locate');
+const statusBox = document.getElementById('status');
+const results = document.getElementById('results');
+const mapArea = document.getElementById('mapArea');
+
+button.addEventListener('click', () => {
+  if (!navigator.geolocation) {
+    statusBox.textContent = 'Browser ini tidak mendukung Geolocation.';
+    return;
+  }
+  button.disabled = true;
+  statusBox.textContent = 'Sedang mengambil lokasi. Pastikan izin lokasi diberikan dan GPS aktif.';
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const { latitude, longitude, accuracy } = pos.coords;
+      document.getElementById('lat').textContent = latitude.toFixed(7);
+      document.getElementById('lon').textContent = longitude.toFixed(7);
+      document.getElementById('accuracy').textContent = `± ${Math.round(accuracy)} meter`;
+      document.getElementById('time').textContent = new Date(pos.timestamp).toLocaleString('id-ID');
+      const query = `${latitude},${longitude}`;
+      document.getElementById('map').src = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&z=17&output=embed`;
+      document.getElementById('mapsLink').href = `https://www.google.com/maps?q=${encodeURIComponent(query)}`;
+      results.hidden = false;
+      mapArea.hidden = false;
+      statusBox.textContent = 'Lokasi berhasil diperoleh.';
+      button.disabled = false;
+    },
+    (err) => {
+      const messages = {
+        1: 'Izin lokasi ditolak. Izinkan lokasi pada pengaturan browser untuk mencoba lagi.',
+        2: 'Lokasi tidak tersedia. Periksa GPS, koneksi, atau coba di luar ruangan.',
+        3: 'Permintaan lokasi timeout. Coba lagi.'
+      };
+      statusBox.textContent = messages[err.code] || `Gagal memperoleh lokasi: ${err.message}`;
+      button.disabled = false;
+    },
+    { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+  );
+});
+</script>
+</body>
+</html>
